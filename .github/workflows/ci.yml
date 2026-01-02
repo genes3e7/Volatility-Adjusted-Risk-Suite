@@ -45,12 +45,12 @@ jobs:
         python -m pip install --upgrade pip
         pip install pip-tools
         
-        # Compile Prod Deps
+        # 1. Compile Prod Deps
         if [ -f requirements.in ]; then 
           pip-compile requirements.in --output-file requirements.txt --resolver=backtracking
         fi
         
-        # Compile Dev Deps (Constrained to Prod versions)
+        # 2. Compile Dev Deps (Constrained to Prod versions)
         if [ -f requirements-dev.in ]; then 
           # The -c flag ensures dev deps don't upgrade prod packages unexpectedly
           pip-compile requirements-dev.in --output-file requirements-dev.txt --resolver=backtracking -c requirements.txt
@@ -112,7 +112,8 @@ jobs:
   finalize-updates:
     needs: [test-matrix, compile-deps]
     runs-on: ubuntu-latest
-    if: always()
+    # Only run if compile-deps SUCCEEDED (artifacts exist) and at least one matrix job finished
+    if: always() && needs.compile-deps.result == 'success'
     steps:
     - uses: actions/checkout@v4
       with:
@@ -178,17 +179,25 @@ jobs:
         if git diff --staged --quiet; then
           echo "No changes to commit."
         else
-          CHANGES=""
-          if git diff --staged --name-only | grep -q "README.md"; then CHANGES="$CHANGES, versions ($MIN_VER-$MAX_VER)"; fi
-          if git diff --staged --name-only | grep -q "requirements"; then CHANGES="$CHANGES, deps"; fi
-          if git diff --staged --name-only | grep -q ".py$"; then CHANGES="$CHANGES, formatting"; fi
+          # Construct commit message using array
+          CHANGES=()
+          if git diff --staged --name-only | grep -q "README.md"; then CHANGES+=("versions ($MIN_VER-$MAX_VER)"); fi
           
-          CHANGES=$(echo "$CHANGES" | sed 's/^, //')
-          if [ -z "$CHANGES" ]; then CHANGES="misc updates"; fi
+          # Tighter pattern match for requirements files (txt or in)
+          if git diff --staged --name-only | grep -qE "requirements.*\.(txt|in)$"; then CHANGES+=("deps"); fi
           
-          git commit -m "chore: CI auto-update ($CHANGES)"
+          if git diff --staged --name-only | grep -q ".py$"; then CHANGES+=("formatting"); fi
           
-          # Pull latest changes to resolve race conditions (fixes ! [rejected] error)
+          if [ ${#CHANGES[@]} -eq 0 ]; then
+            CHANGES_STR="misc updates"
+          else
+            # Join array with ", "
+            CHANGES_STR=$(IFS=", "; echo "${CHANGES[*]}")
+          fi
+          
+          git commit -m "chore: CI auto-update ($CHANGES_STR)"
+          
+          # Pull latest changes to resolve race conditions
           git pull --rebase origin "$PR_BRANCH"
           
           git push origin HEAD:"$PR_BRANCH"
