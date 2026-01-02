@@ -14,7 +14,8 @@ The project follows a standard `src` layout for cleanliness and modularity.
 risk_suite/
 ├── config.json             # Central configuration (Assets & Settings)
 ├── main.py                 # ENTRY POINT (Run this script)
-├── requirements.txt        # Python dependencies
+├── requirements.txt        # Production dependencies (Locked)
+├── requirements-dev.txt    # Development dependencies (Locked)
 ├── README.md               # This file
 └── src/                    # Internal logic modules
     ├── __init__.py
