@@ -159,6 +159,7 @@ jobs:
     # 5. Lint & Format
     - name: Ruff Format & Fix
       run: |
+        python -m pip install --upgrade pip
         # Install dev dependencies (includes Ruff)
         pip install -r requirements-dev.txt
         ruff check . --fix
