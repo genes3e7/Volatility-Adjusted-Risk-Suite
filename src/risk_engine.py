@@ -14,7 +14,7 @@ from src.config_manager import RiskConfig
 
 
 class RiskEngine:
-    """Performs mathematical risk calculations."""
+    """Performs mathematical risk calculations"""
 
     def __init__(self, config: RiskConfig):
         """Initialize the engine with the configuration object."""
