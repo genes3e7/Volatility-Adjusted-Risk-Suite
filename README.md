@@ -1,6 +1,6 @@
 # Volatility-Adjusted Risk Suite
 
-![Python Support](https://img.shields.io/badge/python-3.10%20|%203.11%20|%203.12-blue)
+![Python Support](https://img.shields.io/badge/python-3.10_to_3.14-blue)
 
 A modular, professional-grade Python toolset for calculating safe leverage in volatile markets.
 
@@ -14,7 +14,8 @@ The project follows a standard `src` layout for cleanliness and modularity.
 risk_suite/
 ├── config.json             # Central configuration (Assets & Settings)
 ├── main.py                 # ENTRY POINT (Run this script)
-├── requirements.txt        # Python dependencies
+├── requirements.txt        # Production dependencies (Locked)
+├── requirements-dev.txt    # Development dependencies (Locked)
 ├── README.md               # This file
 └── src/                    # Internal logic modules
     ├── __init__.py
