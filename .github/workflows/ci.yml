@@ -22,6 +22,7 @@ jobs:
           python:
             - '**.py'
             - 'requirements.txt'
+            - 'requirements.in'
             - 'pyproject.toml'
 
   # JOB 2: Test Matrix (Python 3.10 - 3.14)
@@ -45,7 +46,12 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
+        # Resolve fresh from requirements.in to test compatibility for THIS specific version
+        if [ -f requirements.in ]; then
+          pip install -r requirements.in
+        else
+          pip install -r requirements.txt
+        fi
 
     - name: Test with Pytest
       run: pytest tests/
@@ -105,14 +111,23 @@ jobs:
         # The regex looks for the Shields.io badge URL pattern
         sed -i -E "s/badge\/python-[0-9.]+(.*)-blue/badge\/python-${{ env.MIN_VER }}_to_${{ env.MAX_VER }}-blue/" README.md
 
-    # 4. Lint & Format
+    # 4. Compile Requirements (Standardize dependencies)
+    - name: Compile requirements.txt
+      run: |
+        python -m pip install --upgrade pip
+        pip install pip-tools
+        if [ -f requirements.in ]; then 
+          pip-compile requirements.in --output-file requirements.txt --resolver=backtracking
+        fi
+
+    # 5. Lint & Format
     - name: Ruff Format & Fix
       run: |
         pip install -r requirements.txt
         ruff check . --fix
         ruff format .
 
-    # 5. Commit with Detailed Message
+    # 6. Commit with Detailed Message
     - name: Commit and Push changes
       env:
         PR_BRANCH: ${{ github.head_ref || github.ref_name }}
@@ -127,6 +142,6 @@ jobs:
         if git diff --staged --quiet; then
           echo "No changes to commit."
         else
-          git commit -m "chore: CI update (Versions: $MIN_VER-$MAX_VER)"
+          git commit -m "chore: CI update [skip ci]"
           git push origin HEAD:"$PR_BRANCH"
         fi
