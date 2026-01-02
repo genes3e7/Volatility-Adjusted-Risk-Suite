@@ -1,0 +1,132 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  # JOB 1: Detect Changes
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      python: ${{ steps.filter.outputs.python }}
+    steps:
+    - uses: actions/checkout@v4
+    - uses: dorny/paths-filter@v2
+      id: filter
+      with:
+        filters: |
+          python:
+            - '**.py'
+            - 'requirements.txt'
+            - 'pyproject.toml'
+
+  # JOB 2: Test Matrix (Python 3.10 - 3.14)
+  test-matrix:
+    needs: changes
+    if: ${{ needs.changes.outputs.python == 'true' }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+      fail-fast: false
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Test with Pytest
+      run: pytest tests/
+
+    # Record success for this version
+    - name: Record Success
+      if: success()
+      run: echo "${{ matrix.python-version }}" > python_version_${{ matrix.python-version }}.txt
+
+    - name: Upload Success Artifact
+      if: success()
+      uses: actions/upload-artifact@v4
+      with:
+        name: passed-version-${{ matrix.python-version }}
+        path: python_version_${{ matrix.python-version }}.txt
+
+  # JOB 3: Finalize (Update Readme, Lint, Commit)
+  finalize-updates:
+    needs: [test-matrix, changes]
+    runs-on: ubuntu-latest
+    if: always() && needs.changes.outputs.python == 'true'
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    # 1. Download all "success" flags
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+        pattern: passed-version-*
+        merge-multiple: true
+
+    # 2. Calculate Supported Version Range
+    - name: Determine Supported Range
+      id: versions
+      run: |
+        if [ ! -d artifacts ] || [ -z "$(ls -A artifacts)" ]; then
+           echo "No versions passed! Failing job."
+           exit 1
+        fi
+        
+        cat artifacts/*.txt > all_versions.txt
+        sort -V all_versions.txt -o sorted_versions.txt
+        
+        MIN_VER=$(head -n 1 sorted_versions.txt)
+        MAX_VER=$(tail -n 1 sorted_versions.txt)
+        
+        echo "MIN_VER=$MIN_VER" >> $GITHUB_ENV
+        echo "MAX_VER=$MAX_VER" >> $GITHUB_ENV
+
+    # 3. Update README Badge (Inline)
+    - name: Update README Badge
+      run: |
+        # Replaces 'python-3.X...-blue' with the new range 'python-3.X_to_3.Y-blue'
+        # The regex looks for the Shields.io badge URL pattern
+        sed -i -E "s/badge\/python-[0-9.]+(.*)-blue/badge\/python-${{ env.MIN_VER }}_to_${{ env.MAX_VER }}-blue/" README.md
+
+    # 4. Lint & Format
+    - name: Ruff Format & Fix
+      run: |
+        pip install -r requirements.txt
+        ruff check . --fix
+        ruff format .
+
+    # 5. Commit with Detailed Message
+    - name: Commit and Push changes
+      env:
+        PR_BRANCH: ${{ github.head_ref || github.ref_name }}
+        MIN_VER: ${{ env.MIN_VER }}
+        MAX_VER: ${{ env.MAX_VER }}
+      run: |
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        
+        git add .
+        
+        if git diff --staged --quiet; then
+          echo "No changes to commit."
+        else
+          git commit -m "chore: CI update (Versions: $MIN_VER-$MAX_VER)"
+          git push origin HEAD:"$PR_BRANCH"
+        fi

@@ -1,0 +1,28 @@
+{
+  "assets": [
+    "BTC-USD",
+    "ETH-USD",
+    "SOL-USD",
+    "MSTR",
+    "BMNR",
+    "TSLA",
+    "NVDA"
+  ],
+  "risk_multipliers": {
+    "Full Kelly": 0.8,
+    "Half Kelly": 1.5,
+    "Death Floor": 2.5
+  },
+  "settings": {
+    "lookback_days": 365,
+    "volatility_window": 30,
+    "max_crash_cap": 0.85,
+    "drift_lookback_days": 1825,
+    "crypto_trading_days": 365,
+    "stock_trading_days": 252,
+    "dynamic_floor": {
+      "lookback_years": 5,
+      "percentile": 0.25
+    }
+  }
+}
