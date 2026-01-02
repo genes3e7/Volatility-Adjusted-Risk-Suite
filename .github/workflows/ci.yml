@@ -28,7 +28,6 @@ jobs:
             - 'pyproject.toml'
 
   # JOB 2: Compile Dependencies (Runs First)
-  # This ensures lockfiles exist and are compatible with the lowest supported Python (3.10)
   compile-deps:
     needs: changes
     if: ${{ needs.changes.outputs.python == 'true' }}
@@ -51,9 +50,10 @@ jobs:
           pip-compile requirements.in --output-file requirements.txt --resolver=backtracking
         fi
         
-        # Compile Dev Deps
+        # Compile Dev Deps (Constrained to Prod versions)
         if [ -f requirements-dev.in ]; then 
-          pip-compile requirements-dev.in --output-file requirements-dev.txt --resolver=backtracking
+          # The -c flag ensures dev deps don't upgrade prod packages unexpectedly
+          pip-compile requirements-dev.in --output-file requirements-dev.txt --resolver=backtracking -c requirements.txt
         fi
 
     # Upload artifacts so subsequent jobs use these EXACT versions
@@ -66,7 +66,6 @@ jobs:
           requirements-dev.txt
 
   # JOB 3: Test Matrix
-  # Now depends on 'compile-deps' to provide the requirements files
   test-matrix:
     needs: compile-deps
     runs-on: ubuntu-latest
@@ -188,5 +187,9 @@ jobs:
           if [ -z "$CHANGES" ]; then CHANGES="misc updates"; fi
           
           git commit -m "chore: CI auto-update ($CHANGES)"
+          
+          # Pull latest changes to resolve race conditions (fixes ! [rejected] error)
+          git pull --rebase origin "$PR_BRANCH"
+          
           git push origin HEAD:"$PR_BRANCH"
         fi
