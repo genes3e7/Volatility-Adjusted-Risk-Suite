@@ -9,9 +9,9 @@ import logging
 
 import pandas as pd
 
+from src.risk_engine import RiskEngine
 from src.config_manager import RiskConfig
 from src.data_loader import DataLoader
-from src.risk_engine import RiskEngine
 
 
 def setup_logging() -> None:

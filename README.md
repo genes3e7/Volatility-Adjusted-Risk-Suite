@@ -1,6 +1,6 @@
 # Volatility-Adjusted Risk Suite
 
-Python 3.10 - 3.13
+![Python Support](https://img.shields.io/badge/python-3.10%20|%203.11%20|%203.12-blue)
 
 A modular, professional-grade Python toolset for calculating safe leverage in volatile markets.
 
