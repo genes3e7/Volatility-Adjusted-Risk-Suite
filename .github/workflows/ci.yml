@@ -36,7 +36,7 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Set up Python 3.10
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: "3.10"
 
@@ -50,10 +50,15 @@ jobs:
           pip-compile requirements.in --output-file requirements.txt --resolver=backtracking
         fi
         
-        # 2. Compile Dev Deps (Constrained to Prod versions)
+        # 2. Compile Dev Deps (Conditionally Constrained)
         if [ -f requirements-dev.in ]; then 
-          # The -c flag ensures dev deps don't upgrade prod packages unexpectedly
-          pip-compile requirements-dev.in --output-file requirements-dev.txt --resolver=backtracking -c requirements.txt
+          if [ -f requirements.txt ]; then
+            # The -c flag ensures dev deps don't upgrade prod packages unexpectedly
+            pip-compile requirements-dev.in --output-file requirements-dev.txt --resolver=backtracking -c requirements.txt
+          else
+            # Compile without constraints if prod requirements don't exist
+            pip-compile requirements-dev.in --output-file requirements-dev.txt --resolver=backtracking
+          fi
         fi
 
     # Upload artifacts so subsequent jobs use these EXACT versions
@@ -64,6 +69,7 @@ jobs:
         path: |
           requirements.txt
           requirements-dev.txt
+        if-no-files-found: error
 
   # JOB 3: Test Matrix
   test-matrix:
@@ -78,7 +84,7 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python-version }}
 
@@ -128,10 +134,12 @@ jobs:
         merge-multiple: true
 
     # 2. Download Fresh Lockfiles (to commit them)
+    # Added continue-on-error to handle cases where compile-deps was skipped
     - name: Download Lockfiles
       uses: actions/download-artifact@v4
       with:
         name: lockfiles
+      continue-on-error: true
 
     # 3. Calculate Supported Range
     - name: Determine Supported Range
@@ -159,8 +167,8 @@ jobs:
     # 5. Lint & Format
     - name: Ruff Format & Fix
       run: |
-        python -m pip install --upgrade pip
         # Install dev dependencies (includes Ruff)
+        # If lockfiles failed to download, this uses the checked-out versions
         pip install -r requirements-dev.txt
         ruff check . --fix
         ruff format .
@@ -199,7 +207,12 @@ jobs:
           git commit -m "chore: CI auto-update ($CHANGES_STR)"
           
           # Pull latest changes to resolve race conditions
-          git pull --rebase origin "$PR_BRANCH"
+          # Fallback to merge strategy if rebase fails
+          git pull --rebase origin "$PR_BRANCH" || {
+            echo "::warning::Rebase failed, attempting merge strategy"
+            git rebase --abort 2>/dev/null || true
+            git pull --no-rebase origin "$PR_BRANCH"
+          }
           
           git push origin HEAD:"$PR_BRANCH"
         fi
