@@ -45,7 +45,7 @@ platformdirs==4.5.1
     # via yfinance
 pluggy==1.6.0
     # via pytest
-protobuf==6.33.2
+protobuf==6.33.5
     # via yfinance
 pycparser==2.23
     # via cffi
@@ -63,7 +63,7 @@ pytz==2025.2
     # via
     #   pandas
     #   yfinance
-requests==2.32.5
+requests==2.33.0
     # via yfinance
 ruff==0.14.13
     # via -r requirements.in
