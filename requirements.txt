@@ -53,7 +53,7 @@ protobuf==6.33.5
     # via yfinance
 pycparser==2.23
     # via cffi
-pygments==2.19.2
+pygments==2.20.0
     # via
     #   pytest
     #   rich
