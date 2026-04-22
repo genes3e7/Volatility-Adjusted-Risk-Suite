@@ -2,6 +2,3 @@ numpy
 pandas
 yfinance
 openpyxl
-pytest
-pytest-mock
-ruff
