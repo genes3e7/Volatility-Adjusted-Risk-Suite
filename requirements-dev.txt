@@ -12,8 +12,10 @@ packaging==25.0
     # via pytest
 pluggy==1.6.0
     # via pytest
-pygments==2.19.2
-    # via pytest
+pygments==2.20.0
+    # via
+    #   -c requirements.txt
+    #   pytest
 pytest==9.0.2
     # via
     #   -r requirements-dev.in
