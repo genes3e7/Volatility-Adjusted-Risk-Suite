@@ -69,5 +69,5 @@ urllib3==2.7.0
     # via requests
 websockets==15.0.1
     # via yfinance
-yfinance==1.4.1
+yfinance==1.5.1
     # via -r requirements.in
