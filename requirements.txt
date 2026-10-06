@@ -65,7 +65,7 @@ typing-extensions==4.15.0
     # via beautifulsoup4
 tzdata==2026.1
     # via pandas
-urllib3==2.7.0
+urllib3==2.8.0
     # via requests
 websockets==15.0.1
     # via yfinance
