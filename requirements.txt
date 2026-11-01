@@ -6,7 +6,7 @@
 #
 beautifulsoup4==4.14.3
     # via yfinance
-certifi==2025.11.12
+certifi==2026.10.18
     # via
     #   curl-cffi
     #   requests
